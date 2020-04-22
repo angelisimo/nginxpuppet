@@ -42,7 +42,4 @@
 #
 # Copyright 2020 Your name here, unless otherwise noted.
 #
-class nginxproxy {
-
-
-}
+class{'nginx': }
