@@ -1,5 +1,5 @@
 class nginxpuppet (
-
+#parameters defined in params.pp
 $allow_from_ip_range = $::nginxpuppet::params::allow_from_ip_range,
 $ssl_certs_dir = $::nginxpuppet::params::ssl_certs_dir,
 $forward_proxy_port = $::nginxpuppet::params::forward_proxy_port,
@@ -7,14 +7,21 @@ $domain = $::nginxpuppet::params::domain,
 
 ) inherits ::nginxpuppet::params
 {
-
+#for debian systems
 include apt
 
+package { 'dirmngr':
+  ensure => installed,
+}
+
+
+#host poison for local testing 
 host {$domain:
 ensure => present,
 ip => '127.0.0.1',
 }
 
+#create ss certificate
 exec {'create_self_signed_sslcert':
   command => "openssl req -newkey rsa:2048 -nodes -keyout ${::fqdn}.key  -x509 -days 365 -out ${::fqdn}.crt -subj '/CN=${::fqdn}'",
   cwd     => $ssl_certs_dir,
@@ -22,17 +29,12 @@ exec {'create_self_signed_sslcert':
   path    => ["/usr/bin", "/usr/sbin"]
 }
 
-
-package { 'dirmngr':
-  ensure => installed,
-}
-
-
+#apache webserver
 class { 'apache':
   default_vhost => false,
 }
 
-
+#Forward proxy, with custom logging format
 apache::vhost { 'forward_proxy':
   port    => $forward_proxy_port,
   docroot => '/var/www/vhost',
@@ -43,6 +45,7 @@ apache::vhost { 'forward_proxy':
   '
 }
 
+#Apache plugins necessaries for proxy forwarding
 class { 'apache::mod::proxy':
 proxy_requests => 'On',
 allow_from => $allow_from_ip_range,
@@ -51,7 +54,7 @@ class { 'apache::mod::proxy_http': }
 class { 'apache::mod::proxy_connect': }
 
 
-
+#Reverse Proxy
 class{'nginx': }
 
 nginx::resource::server{$domain:
@@ -65,13 +68,14 @@ nginx::resource::server{$domain:
   use_default_location => false,
 }
 
-
+#locations for redirections
 nginx::resource::location{'/':
   proxy => 'https://20.20.20.20/' ,
   server => $domain,
   ssl => true,
   ssl_only => true,
 }
+
 
 nginx::resource::location{'/resources':
   proxy => 'https://10.10.10.10/' ,
