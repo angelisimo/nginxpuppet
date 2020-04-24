@@ -83,7 +83,7 @@ class { 'apache':
   default_vhost => false,
 }
 
-#Forward proxy, with custom logging format
+#Forward proxy, with custom logging format whcih will log in the access log with a json format
 apache::vhost { 'forward_proxy':
   port    => $forward_proxy_port,
   docroot => '/var/www/vhost',
