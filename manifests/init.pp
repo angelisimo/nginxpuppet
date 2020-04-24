@@ -1,45 +1,84 @@
-# Class: nginxproxy
-# ===========================
-#
-# Full description of class nginxproxy here.
-#
-# Parameters
-# ----------
-#
-# Document parameters here.
-#
-# * `sample parameter`
-# Explanation of what this parameter affects and what it defaults to.
-# e.g. "Specify one or more upstream ntp servers as an array."
-#
-# Variables
-# ----------
-#
-# Here you should define a list of variables that this module would require.
-#
-# * `sample variable`
-#  Explanation of how this variable affects the function of this class and if
-#  it has a default. e.g. "The parameter enc_ntp_servers must be set by the
-#  External Node Classifier as a comma separated list of hostnames." (Note,
-#  global variables should be avoided in favor of class parameters as
-#  of Puppet 2.6.)
-#
-# Examples
-# --------
-#
-# @example
-#    class { 'nginxproxy':
-#      servers => [ 'pool.ntp.org', 'ntp.local.company.com' ],
-#    }
-#
-# Authors
-# -------
-#
-# Author Name <author@domain.com>
-#
-# Copyright
-# ---------
-#
-# Copyright 2020 Your name here, unless otherwise noted.
-#
+class nginxpuppet {
+
+include apt
+
+file {'/tmp/server.crt':
+  ensure => present,
+  mode => '0644',
+  source => 'puppet:///modules/nginxpuppet/server.crt',
+}
+
+
+file {'/tmp/server.pem':
+  ensure => present,
+  mode => '0644',
+  source => 'puppet:///modules/nginxpuppet/server.pem',
+}
+
+
+package { 'dirmngr':
+  ensure => installed,
+}
+
+package { 'tinyproxy':
+  ensure => absent,
+  
+}
+
+
+class { 'apache':
+  default_vhost => false,
+}
+
+
+
+
+apache::vhost { 'forward_proxy':
+  port    => '8888',
+  docroot => '/var/www/vhost',
+  access_log_format => customlog,
+  custom_fragment => 'LogFormat "{ \"time\":\"%t\", \"remoteIP\":\"%a\", \"host\":\"%V\", \"request\":\"%U\", \"query\":\"%q\", \"method\":\"%m\", \"status\":\"%>s\", \"userAgent\":\"%{User-agent}i\", \"referer\":\"%{Referer}i\" }" customlog
+  ProxyRequests On
+  ProxyVia On
+  '
+}
+
+class { 'apache::mod::proxy':
+proxy_requests => 'On',
+allow_from => '10.128.0.54',
+}
+class { 'apache::mod::proxy_http': }
+class { 'apache::mod::proxy_connect': }
+
+
+
 class{'nginx': }
+
+nginx::resource::server{'www.domain.com':
+  ensure => present,
+  www_root => '/opt/html/',
+  ssl => true,
+  listen_port => 443,
+  ssl_port => 443,
+  ssl_cert => '/tmp/server.crt',
+  ssl_key => '/tmp/server.pem',
+  use_default_location => false,
+}
+
+
+nginx::resource::location{'/':
+  proxy => 'https://20.20.20.20/' ,
+  server => 'www.domain.com',
+  ssl => true,
+  ssl_only => true,
+}
+
+nginx::resource::location{'/resources':
+  proxy => 'https://10.10.10.10/' ,
+  server => 'www.domain.com',
+  ssl => true,
+  ssl_only => true,
+}
+
+}
+

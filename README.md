@@ -39,6 +39,12 @@ If there's more that they should know about, though, this is the place to mentio
 * Warnings or other important notices.
 
 ### Setup Requirements **OPTIONAL**
+- Modules from forge
+-- puppet/nginx
+-- puppetlabs/apt
+-- puppetlabs/apache
+
+
 
 If your module requires anything extra before setting up (pluginsync enabled,
 etc.), mention it here.
